@@ -13,6 +13,16 @@ const store = new KnexSessionStore({
   knex,
 });
 
+
+import {
+  setupOptics,
+  opticsMiddleware,
+  instrumentSchema,
+  newContext,
+} from 'optics-agent';
+setupOptics({appKey: '1234'});
+
+
 import { schema, resolvers } from './schema';
 import { GitHubConnector } from './github/connector';
 import { Repositories, Users } from './github/models';
@@ -63,7 +73,9 @@ const executableSchema = makeExecutableSchema({
   typeDefs: schema,
   resolvers,
 });
+instrumentSchema(executableSchema);
 
+app.use('/graphql', opticsMiddleware);
 app.use('/graphql', apolloExpress((req) => {
   // Get the query, the same way express-graphql does it
   // https://github.com/graphql/express-graphql/blob/3fa6e68582d6d933d37fa9e841da5d2aa39261cd/src/index.js#L257
@@ -99,6 +111,7 @@ app.use('/graphql', apolloExpress((req) => {
       Users: new Users({ connector: gitHubConnector }),
       Entries: new Entries(),
       Comments: new Comments(),
+      opticsContext: newContext(req),
     },
   };
 }));
